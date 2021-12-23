@@ -1,6 +1,15 @@
 package controllers
 
-import "github.com/gin-gonic/gin"
+import (
+	"net/http"
+	"profesimu/dto"
+	"profesimu/entity"
+	"profesimu/helper"
+	"profesimu/services"
+	"strconv"
+
+	"github.com/gin-gonic/gin"
+)
 
 type AuthController interface {
 	Login(ctx *gin.Context)
@@ -9,21 +18,51 @@ type AuthController interface {
 
 type authController struct {
 	// masukan service yang dibutuhkan
-
+	authService services.AuthService
+	jwtService  services.JWTService
 }
 
-func NewAuthController() AuthController {
-	return &authController{}
+func NewAuthController(authService services.AuthService, jwtService services.JWTService) AuthController {
+	return &authController{
+		authService: authService,
+		jwtService:  jwtService,
+	}
 }
 
 func (c *authController) Login(ctx *gin.Context) {
-	ctx.JSON(200, gin.H{
-		"message": "hello login",
-	})
+	var loginDTO dto.LoginDTO
+
+	errDTO := ctx.ShouldBindJSON(&loginDTO)
+	if errDTO != nil {
+		res := helper.BuildErrorResponse("Failed to process request", errDTO.Error(), helper.EmptyObj{})
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, res)
+		return
+	}
+
+	authResult := c.authService.VerifyCredential(loginDTO.Email, loginDTO.Password)
+	if value, ok := authResult.(entity.User); ok {
+		generateToken := c.jwtService.GenerateToken(strconv.FormatUint(uint64(value.ID), 10))
+		value.Token = generateToken
+		response := helper.BuildResponse(true, "OK", value)
+		ctx.JSON(http.StatusOK, response)
+	}
+
+	errRes := helper.BuildErrorResponse("Please check again your credential", "Invalid credential", helper.EmptyObj{})
+	ctx.AbortWithStatusJSON(http.StatusUnauthorized, errRes)
 }
 
 func (c *authController) Register(ctx *gin.Context) {
-	ctx.JSON(200, gin.H{
-		"message": "hello register",
-	})
+	var registerDTO dto.RegisterDTO
+
+	errDTO := ctx.ShouldBindJSON(&registerDTO)
+	if errDTO != nil {
+		res := helper.BuildErrorResponse("Failed to process request", errDTO.Error(), helper.EmptyObj{})
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, res)
+		return
+	}
+
+	// if !c.authService.IsDuplicateEmail(registerDTO.Email) {
+	// 	errRes := helper.BuildErrorResponse("Failed to process request", "Duplicate email", helper.EmptyObj{})
+	// }
+
 }
