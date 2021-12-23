@@ -52,17 +52,24 @@ func (c *authController) Login(ctx *gin.Context) {
 }
 
 func (c *authController) Register(ctx *gin.Context) {
-	var registerDTO dto.RegisterDTO
+	var registerData dto.RegisterDTO
 
-	errDTO := ctx.ShouldBindJSON(&registerDTO)
+	errDTO := ctx.ShouldBindJSON(&registerData)
 	if errDTO != nil {
 		res := helper.BuildErrorResponse("Failed to process request", errDTO.Error(), helper.EmptyObj{})
 		ctx.AbortWithStatusJSON(http.StatusBadRequest, res)
 		return
 	}
 
-	// if !c.authService.IsDuplicateEmail(registerDTO.Email) {
-	// 	errRes := helper.BuildErrorResponse("Failed to process request", "Duplicate email", helper.EmptyObj{})
-	// }
+	if !c.authService.IsDuplicateEmail(registerData.Email) {
+		errRes := helper.BuildErrorResponse("Failed to process request", "Duplicate email", helper.EmptyObj{})
+		ctx.JSON(http.StatusConflict, errRes)
+	} else {
+		createdUser := c.authService.CreateUser(dto.UserCreateDTO(registerData))
+		token := c.jwtService.GenerateToken(strconv.FormatUint(uint64(createdUser.ID), 10))
+		createdUser.Token = token
+		response := helper.BuildResponse(true, "OK!", createdUser)
+		ctx.JSON(http.StatusOK, response)
+	}
 
 }
