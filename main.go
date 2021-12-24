@@ -10,11 +10,12 @@ func main() {
 	config.InitDatabase()
 	router := gin.Default()
 
-	auth := router.Group("api/auth")
-	// main := router.Group("api")
+	auth := router.Group("/auth")
+	main := router.Group("/")
 
 	auth.POST("/login")
 	auth.POST("/register")
+	main.GET("/profession")
 
 	router.Run()
 }
