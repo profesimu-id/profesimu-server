@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"profesimu/models"
 
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
@@ -26,7 +27,7 @@ func InitDatabase() *gorm.DB {
 	if err != nil {
 		panic("Failed to connect database")
 	}
-	db.AutoMigrate()
+	db.AutoMigrate(&models.User{}, &models.Profile{})
 
 	return db
 }
